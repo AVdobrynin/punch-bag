@@ -40,7 +40,7 @@ def get_hx_data(hx):
         val = hx.get_weight_mean(1)
         if val < 0:
             val = val * (-1)
-        print(val)
+
     except Exception:
         return 0
     return val / 1000
@@ -51,9 +51,12 @@ async def ws_sender(ws, hxs) -> None:
         print(f"event: {event.is_set()}")
         while True:
             if event.is_set():
-                for hx in hxs:
-                    val = get_hx_data(hx)
-                    print(val)
+                for i in range(0, 8):
+                    val = round(get_hx_data(hxs[i]), 2)
+                    if val > hx_val[i] and val <= 2000:
+                        hx_val[i] = val
+                        print(hx_val)
+                        await ws.send(json.dumps({"message": "load", "data": hx_val}))
             # if val is not None:
             #     await ws.send(json.dumps({"message": "load", "data": val}))
     except Exception:
@@ -88,6 +91,7 @@ async def handler(websocket):
                     
             elif message["message"] == "stop":
                 event.clear()
+                hx_val = [0, 0, 0, 0, 0, 0, 0, 0]
                 await websocket.send(json.dumps({"message": "stopped"}))
 
         except Exception as e:
