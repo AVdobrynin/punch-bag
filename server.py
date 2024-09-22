@@ -53,7 +53,7 @@ async def ws_sender(ws, hxs) -> None:
             if event.is_set():
                 for i in range(0, 8):
                     val = round(get_hx_data(hxs[i]), 2)
-                    if val > hx_val[i] and val <= 2000:
+                    if val > 100 and val > hx_val[i] and val <= 2000:
                         hx_val[i] = val
                         print(hx_val)
                         await ws.send(json.dumps({"message": "load", "data": hx_val}))
