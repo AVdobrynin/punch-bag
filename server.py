@@ -7,6 +7,9 @@ import threading
 import websockets
 
 from hx711_weight import HX711
+
+event = threading.Event()
+started = False
 hxs = [HX711(5, 6), HX711(14, 15), HX711(17, 27), HX711(18, 19), HX711(22, 25), HX711(23, 24), HX711(26, 16), HX711(4, 3)]
 hxs_ratio = [-0.77045, -0.7108, -0.7042, -0.7194, -0.69965, -0.716, -0.6916, -0.72945]
 hx_val = [0, 0, 0, 0, 0, 0, 0, 0]
@@ -46,8 +49,9 @@ def get_hx_data(hx):
 async def ws_sender(ws) -> None:
     try:
         while True:
-            val = get_hx_data()
-            print(val)
+            if event.is_set():
+                val = get_hx_data()
+                print(val)
             # if val is not None:
             #     await ws.send(json.dumps({"message": "load", "data": val}))
     except Exception:
@@ -75,9 +79,15 @@ async def handler(websocket):
             elif message["message"] == "start":
                 print("START")
                 await websocket.send(json.dumps({"message": "started"}))
-                loop = asyncio.new_event_loop()
-                t = threading.Thread(target=loop_in_thread, args=(loop,websocket))
-                t.start()
+                if(not event.is_set()):
+                    if(not started):
+                        loop = asyncio.new_event_loop()
+                        t = threading.Thread(target=loop_in_thread, args=(loop,websocket))
+                        t.start()
+                    event.set()
+            elif message["message"] == "stop":
+                event.clear()
+                await websocket.send(json.dumps({"message": "stopped"}))
 
         except Exception as e:
             raise e from e
