@@ -46,45 +46,46 @@ def get_hx_data(hx):
     return val / 1000
         
         
-async def ws_sender(ws) -> None:
+async def ws_sender(ws, hxs) -> None:
     try:
+        print(f"event: {event.is_set()}")
         while True:
             if event.is_set():
-                val = get_hx_data()
-                print(val)
+                for hx in hxs:
+                    val = get_hx_data(hx)
+                    print(val)
             # if val is not None:
             #     await ws.send(json.dumps({"message": "load", "data": val}))
     except Exception:
         return
 
 
-def loop_in_thread(loop, ws):
+def loop_in_thread(loop, ws, hxs):
     asyncio.set_event_loop(loop)
-    loop.run_until_complete(ws_sender(ws))
+    loop.run_until_complete(ws_sender(ws, hxs))
 
 
 async def handler(websocket):
-    hx_init_start()
     async for msg in websocket:
         try:
             message = json.loads(msg)
-            if message["message"] == "calibrate_start":
-                print("START CALIBRATE")
-                await websocket.send(json.dumps({"message": "Start calibrating"}))
-                
-                await websocket.send(json.dumps({"message": "Put a known weight on device"}))
+            if message["message"] == "status":
+                await websocket.send(json.dumps({"message": "status", "data": { "initialized": hx_initialized, "started": event.is_set()}}))
             elif message["message"] == "initialize":
-                calibrate_hx(hxs[message[id]], hxs_ratio[message[id]])
-                await websocket.send(json.dumps({"message": "initialized"}))
+                calibrate_hx(hxs[message["id"]], hxs_ratio[message["id"]])
+                await websocket.send(json.dumps({"message": "initialized", "id":message["id"]}))
             elif message["message"] == "start":
                 print("START")
                 await websocket.send(json.dumps({"message": "started"}))
                 if(not event.is_set()):
+                    print("prepare")
                     if(not started):
+                        print("loop")
+                        event.set()
                         loop = asyncio.new_event_loop()
-                        t = threading.Thread(target=loop_in_thread, args=(loop,websocket))
+                        t = threading.Thread(target=loop_in_thread, args=(loop,websocket, hxs))
                         t.start()
-                    event.set()
+                    
             elif message["message"] == "stop":
                 event.clear()
                 await websocket.send(json.dumps({"message": "stopped"}))
@@ -100,5 +101,7 @@ async def main():
 
 
 if __name__ == "__main__":
+    event.clear()
+    hx_init_start()
     print("SERVER STARTED")
     asyncio.run(main())
