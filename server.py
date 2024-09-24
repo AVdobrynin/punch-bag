@@ -87,8 +87,7 @@ async def handler(websocket):
                         event.set()
                         loop = asyncio.new_event_loop()
                         t = threading.Thread(target=loop_in_thread, args=(loop,websocket, hxs))
-                        t.start()
-                    
+                        t.start()       
             elif message["message"] == "stop":
                 event.clear()
                 hx_val = [0, 0, 0, 0, 0, 0, 0, 0]
