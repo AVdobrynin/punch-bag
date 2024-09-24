@@ -1,5 +1,3 @@
-
-
 import json
 import asyncio
 import threading
@@ -14,7 +12,6 @@ hxs = [HX711(5, 6), HX711(14, 15), HX711(17, 27), HX711(18, 19), HX711(22, 25), 
 hxs_ratio = [-0.77045, -0.7108, -0.7042, -0.7194, -0.69965, -0.716, -0.6916, -0.72945]
 hx_val = [0, 0, 0, 0, 0, 0, 0, 0]
 hx_initialized = [0, 0, 0, 0, 0, 0, 0, 0]
-hx_loop = [0, 0, 0, 0, 0, 0, 0, 0]
 
 
 def hx_init_start():
@@ -47,27 +44,26 @@ def get_hx_data(hx):
     return val / 1000
         
         
-async def ws_sender(ws, hxs, elem) -> None:
+async def ws_sender(ws, hxs) -> None:
     try:
-        print(f"event: {event.is_set()}, elem:{elem}")
+        print(f"event: {event.is_set()}")
         while True:
             if event.is_set():
-                val = round(get_hx_data(hxs[elem]), 2)
-                if val > 100 and val > hx_val[elem] and val <= 2000:
-                    hx_val[elem] = val
-                    print(hx_val)
-                    await ws.send(json.dumps({"message": "load", "data": hx_val}))
-            else:
-                hx_val[elem] = 0
+                for i in range(0, 8):
+                    val = round(get_hx_data(hxs[i]), 2)
+                    if val > 100 and val > hx_val[i] and val <= 2000:
+                        hx_val[i] = val
+                        print(hx_val)
+                        await ws.send(json.dumps({"message": "load", "data": hx_val}))
             # if val is not None:
             #     await ws.send(json.dumps({"message": "load", "data": val}))
     except Exception:
         return
 
 
-def loop_in_thread(loop, ws, hxs, elem):
+def loop_in_thread(loop, ws, hxs):
     asyncio.set_event_loop(loop)
-    loop.run_until_complete(ws_sender(ws, hxs, elem))
+    loop.run_until_complete(ws_sender(ws, hxs))
 
 
 async def handler(websocket):
@@ -87,9 +83,9 @@ async def handler(websocket):
                     if(not started):
                         print("loop")
                         event.set()
-                        for i in range(0, len(hx_loop)):
-                            print(f"loop #: {i}")
-                            threading.Thread(target=loop_in_thread, args=(asyncio.new_event_loop(),websocket, hxs, i)).start()    
+                        loop = asyncio.new_event_loop()
+                        t = threading.Thread(target=loop_in_thread, args=(loop,websocket, hxs))
+                        t.start()       
             elif message["message"] == "stop":
                 event.clear()
                 hx_val = [0, 0, 0, 0, 0, 0, 0, 0]
