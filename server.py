@@ -57,7 +57,8 @@ async def ws_sender(ws, hxs) -> None:
                         await ws.send(json.dumps({"message": "load", "data": hx_val}))
                 sys.stdout.flush()
             else:
-                hx_val = [0, 0, 0, 0, 0, 0, 0, 0]    
+                 for i in range(0, 8):
+                    hx_val[i] = 0 
             # if val is not None:
             #     await ws.send(json.dumps({"message": "load", "data": val}))
     except Exception:
@@ -85,14 +86,15 @@ async def handler(websocket):
                     print("prepare")
                     if(not started):
                         print("loop")
-                        event.set()
+                        event.set()  
                         loop = asyncio.new_event_loop()
                         t = threading.Thread(target=loop_in_thread, args=(loop,websocket, hxs))
-                        t.start()       
+                        t.start()  
             elif message["message"] == "stop":
                 event.clear()
-                hx_val = [0, 0, 0, 0, 0, 0, 0, 0]
                 await websocket.send(json.dumps({"message": "stopped"}))
+                for i in range(0, 8):
+                    hx_val[i] = 0 
 
         except Exception as e:
             raise e from e
