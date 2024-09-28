@@ -1,7 +1,7 @@
 import json
 import asyncio
 import threading
-
+import sys
 import websockets
 
 from hx711_weight import HX711
@@ -19,9 +19,9 @@ def hx_init_start():
         hx.reset()
         hx.set_gain_A(gain=64)  # You can change the gain for channel A  at any time.
         hx.select_channel(channel='A')  # Select desired channel. Either 'A' or 'B' at any time.
-        data = hx.get_data_mean(readings=30)
-        result = hx.zero(readings=30)
-        data = hx.get_data_mean(readings=30)
+        data = hx.get_data_mean(readings=10)
+        result = hx.zero(readings=10)
+        data = hx.get_data_mean(readings=10)
 
 
 # def calibrate_hx(known_weight_grams: float):
@@ -38,7 +38,6 @@ def get_hx_data(hx):
         val = hx.get_weight_mean(1)
         if val < 0:
             val = val * (-1)
-
     except Exception:
         return 0
     return val / 1000
@@ -51,10 +50,14 @@ async def ws_sender(ws, hxs) -> None:
             if event.is_set():
                 for i in range(0, 8):
                     val = round(get_hx_data(hxs[i]), 2)
-                    if val > 100 and val > hx_val[i] and val <= 2000:
+                    sys.stdout.write("num is: %d. Val progress: %d%%   \r"% (i, val) )
+                    if val > 10 and val > hx_val[i] and val <= 2000:
                         hx_val[i] = val
                         print(hx_val)
                         await ws.send(json.dumps({"message": "load", "data": hx_val}))
+                sys.stdout.flush()
+            else:
+                hx_val = [0, 0, 0, 0, 0, 0, 0, 0]    
             # if val is not None:
             #     await ws.send(json.dumps({"message": "load", "data": val}))
     except Exception:
