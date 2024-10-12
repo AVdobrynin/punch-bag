@@ -1,4 +1,4 @@
-ls
-cd /home/punch-bag/
-source punch-bag/bin/activate
-python server.py 
+sudo apt install python3-colorzero
+sudo apt install python3-gpiozero
+sudo apt install python3-lgpio
+sudo apt install python3-websockets
